@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carrito de Compras</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Carrito de Compras</h1>
+
+    <div id="items"></div>
+
+    <div id="productos-disponibles">
+      <p>Productos disponibles:</p>
+    </div>
+
+    <div id="carrito">
+      <h2>Productos en el carrito:</h2>
+    </div>
+
+    <p id="total"></p>
+
+    <div>
+      <label for="input-producto">Producto:</label>
+      <select id="input-producto">
+        <option value="-1">Seleccione un producto</option>
+      </select>
+    </div>
+    <div>
+      <label for="input-unidades">Unidades:</label>
+      <input type="number" id="input-unidades" min="1">
+    </div>
+    <button type="button" id="btn-agregar">Agregar al carrito</button>
+    <button type="button" id="btn-finalizar">Finalizar compra</button>
+
+    <div id="total-pagar"></div>
+    <div id="detalles-compra"></div>
+    <div id="mensaje"></div>
+
+    <script>
+      let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+
+      const productosDisponiblesElemento = document.getElementById('productos-disponibles');
+      const carritoElemento = document.getElementById('carrito');
+      const totalElemento = document.getElementById('total');
+
+      fetch('productos.json')
+        .then(response => response.json())
+        .then(data => {
+          const productosApi = data;
+          productosApi.forEach((producto, index) => {
+            const productoElemento = document.createElement('div');
+            productoElemento.textContent = `${producto.nombre} - $${producto.precio}`;
+            productosDisponiblesElemento.appendChild(productoElemento);
+
+            const optionElemento = document.createElement('option');
+            optionElemento.textContent = `${producto.nombre} - $${producto.precio}`;
+            optionElemento.value = index;
+            document.getElementById('input-producto').appendChild(optionElemento);
+          });
+
+          document.getElementById('btn-agregar').addEventListener('click', () => {
+            const selectedProductIndex = parseInt(document.getElementById('input-producto').value);
+            agregarAlCarrito(selectedProductIndex, productosApi);
+          });
+        })
+        .catch(error => {
+          console.error('Error al cargar los productos:', error);
+        });
+
+      function agregarAlCarrito(index, productosApi) {
+        const unidades = parseInt(document.getElementById('input-unidades').value);
+
+        if (index >= 0 && index < productosApi.length && unidades > 0) {
+          const productoSeleccionado = productosApi[index];
+
+          const productoEnCarrito = carrito.find(item => item.producto === productoSeleccionado.nombre);
+
+          if (productoEnCarrito) {
+            productoEnCarrito.unidades += unidades;
+          } else {
+            carrito.push({ producto: productoSeleccionado.nombre, unidades, precio: productoSeleccionado.precio });
+          }
+
+          carritoElemento.innerHTML = '<h2>Productos en el carrito:</h2>';
+          carrito.forEach(item => {
+            const itemElemento = document.createElement('div');
+            itemElemento.textContent = `${item.producto} - $${item.precio} - Unidades: ${item.unidades}`;
+            carritoElemento.appendChild(itemElemento);
+          });
+
+          localStorage.setItem('carrito', JSON.stringify(carrito));
+          mostrarMensaje('¡Producto agregado al carrito!');
+        }
+      }
+
+      function finalizarCompra() {
+        const detallesCompraElemento = document.getElementById('detalles-compra');
+        detallesCompraElemento.textContent = '';
+
+        carrito.forEach((carritoFinal) => {
+          const detalleElemento = document.createElement('div');
+          detalleElemento.textContent = `Producto: ${carritoFinal.producto}, Unidades: ${carritoFinal.unidades}, Total a pagar: $${carritoFinal.unidades * carritoFinal.precio}`;
+          detallesCompraElemento.appendChild(detalleElemento);
+        });
+
+        const total = carrito.reduce((acc, el) => acc + el.precio * el.unidades, 0);
+        totalElemento.textContent = `Total a pagar: $${total}`;
+
+        carrito = [];
+        carritoElemento.innerHTML = '<h2>Productos en el carrito:</h2>';
+        totalElemento.textContent = '';
+
+        localStorage.removeItem('carrito');
+
+        mostrarMensaje('¡Gracias por elegirnos!');
+      }
+
+      function mostrarMensaje(mensaje) {
+        Swal.fire({
+          text: mensaje,
+          icon: 'success',
+          timer: 3000,
+          timerProgressBar: true,
+          toast: true,
+          position: 'top-end'
+        });
+      }
+
+      document.getElementById('btn-agregar').addEventListener('click', () => {
+        const selectedProductIndex = parseInt(document.getElementById('input-producto').value);
+        agregarAlCarrito(selectedProductIndex);
+      });
+
+      document.getElementById('btn-finalizar').addEventListener('click', finalizarCompra);
+    </script>
+  </div>
+</body>
+</html>
